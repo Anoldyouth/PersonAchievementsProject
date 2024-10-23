@@ -23,7 +23,8 @@ def upgrade() -> None:
     op.create_table(
         table_name,
         sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), primary_key=True),
-        sa.Column('achievement_id', sa.Integer, sa.ForeignKey('achievements.id'), primary_key=True)
+        sa.Column('achievement_id', sa.Integer, sa.ForeignKey('achievements.id'), primary_key=True),
+        sa.Column('created_at', sa.DateTime, server_default=sa.func.current_timestamp(), nullable=False),
     )
 
 

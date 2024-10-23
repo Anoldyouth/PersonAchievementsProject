@@ -17,4 +17,4 @@ class User(Base):
     name = Column(String, nullable=False)
     lang = Column(SqlEnum(LanguageEnum), nullable=False)
 
-    achievements = relationship('Achievement', secondary='users_achievements', back_populates=__tablename__)
+    achievements = relationship('UserAchievement', back_populates='user')

@@ -13,4 +13,4 @@ class Achievement(Base):
     value = Column(Integer, nullable=False)
     description = Column(Text, nullable=False)
 
-    users = relationship('User', secondary='users_achievements', back_populates=__tablename__)
+    users = relationship('User', secondary='users_achievements', back_populates='achievement')
