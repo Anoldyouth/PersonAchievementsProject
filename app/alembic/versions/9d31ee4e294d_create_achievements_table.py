@@ -23,9 +23,9 @@ def upgrade():
     op.create_table(
         table_name,
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('name', sa.String, nullable=False),
+        sa.Column('names', sa.JSON, nullable=False),
         sa.Column('value', sa.Integer, nullable=False),
-        sa.Column('description', sa.Text, nullable=False),
+        sa.Column('descriptions', sa.JSON, nullable=False),
     )
     op.create_check_constraint(
         'non_negative_value',

@@ -29,3 +29,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Базовый класс для моделей
 Base = declarative_base()
+Base.metadata.create_all(bind=engine)
+
+
+# Функция зависимости для получения сессии базы данных
+def get_session():
+    session = sessionmaker(bind=engine)()
+    try:
+        yield session
+    finally:
+        session.close()
+

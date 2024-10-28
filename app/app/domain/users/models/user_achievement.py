@@ -1,8 +1,7 @@
-from enum import Enum
-from sqlalchemy import Column, Integer, String, Enum as SqlEnum, ForeignKey, DateTime, func
-from sqlalchemy.orm import relationship
-
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, func
+from sqlalchemy.orm import Mapped, relationship
 from config.database import Base
+from ...achievements.models import Achievement
 
 
 class UserAchievement(Base):
@@ -12,5 +11,4 @@ class UserAchievement(Base):
     achievement_id = Column(Integer, ForeignKey('achievements.id'), primary_key=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
-    user = relationship("User", back_populates="achievements")
-    achievement = relationship("Achievement", back_populates="users")
+    achievement: Mapped['Achievement'] = relationship('Achievement')
