@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 from fastapi import Depends
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, literal_column
+from sqlalchemy.orm import Session, aliased
 
 from app.api.v1.users.requests.get_users_filter_enum import FilterEnum
 from app.api.v1.users.resources.user_resource import UserResource
@@ -143,47 +143,49 @@ class GetUsersAction:
     '''
     Метод получения пользователей с минимальной разницей в набранных баллах
     '''
+
     def __filter_is_min_delta_value(self):
         # Подзапрос для вычисления сумм очков для каждого пользователя
-        user_points = (self.db.query(
-            UserAchievement.user_id,
-            func.sum(Achievement.value).label("total_points")
+        user_points = (
+            self.db.query(
+                UserAchievement.user_id,
+                func.sum(Achievement.value).label("total_points")
+            )
+            .join(Achievement, UserAchievement.achievement_id == Achievement.id)
+            .group_by(UserAchievement.user_id)
+            .subquery()
         )
-                       .join(Achievement, UserAchievement.achievement_id == Achievement.id)
-                       .group_by(UserAchievement.user_id)
-                       .subquery())
 
-        # Подзапрос для вычисления максимальных и минимальных очков для каждого пользователя
-        max_min_points = self.db.query(
-            user_points.c.user_id,
-            func.max(user_points.c.total_points).label("max_points"),
-            func.min(user_points.c.total_points).label("min_points")
-        ).group_by(user_points.c.user_id).subquery()
+        # Создаем алиасы для подзапроса, чтобы найти пары пользователей
+        u1 = aliased(user_points)
+        u2 = aliased(user_points)
 
-        # Подзапрос для вычисления разности между максимальными и минимальными очками
-        user_deltas = self.db.query(
-            max_min_points.c.user_id,
-            (max_min_points.c.max_points - max_min_points.c.min_points).label("points_difference")
-        ).subquery()
+        # Находим минимальную разницу между очками любых двух пользователей
+        min_delta = (self.db.query(
+            u1.c.user_id.label("user_1_id"),
+            u2.c.user_id.label("user_2_id"),
+            func.abs(u1.c.total_points - u2.c.total_points).label(
+                "points_diff"
+            ),
+        )
+         .filter(u1.c.user_id < u2.c.user_id)
+         .order_by(literal_column("points_diff").asc())
+         .first())
 
-        # Получаем минимальную разность очков
-        min_delta = self.db.query(func.min(user_deltas.c.points_difference)).scalar()
+        users = [
+            self.db.query(User).filter(min_delta.user_1_id == User.id).first(),
+            self.db.query(User).filter(min_delta.user_2_id == User.id).first(),
+        ]
 
-        # Запрос на получение пользователей с минимальной разностью очков
-        users_with_min_delta = (self.db.query(User)
-                                .join(user_deltas, User.id == user_deltas.c.user_id)
-                                .filter(user_deltas.c.points_difference == min_delta).all())
-
-        result_users = []
-
-        # Обработка пользователей с минимальной разностью очков
-        for user in users_with_min_delta:
-            result_users.append(UserResource(
+        result_users = [
+            UserResource(
                 id=user.id,
                 name=user.name,
                 lang=user.lang,
                 value=user.get_total_value()
-            ))
+            )
+            for user in users
+        ]
 
         return result_users
 
